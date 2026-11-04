@@ -1,0 +1,50 @@
+# Runs the test suite inside Docker, in the same hardened container on the same internal-only
+# network as `make test`. Needs a runner that allows privileged containers, for Docker-in-Docker.
+#
+# If your runners need tags, add them under `.docker-job`. To build through internal mirrors, set
+# APT_MIRROR, PIP_INDEX_URL and PIP_TRUSTED_HOST as CI/CD variables.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Avoids running two pipelines for a branch that has an open merge request.
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - test
+
+.docker-job:
+  stage: test
+  image: docker:29.9.3-cli@sha256:4d742ab934c2149b628bf26369ac3ec51cb91e2e28fe6722a0e86a6d6efc4bd5
+  services:
+    - name: docker:29.9.3-dind@sha256:d035bd30886e451b2727ef3cdb9af9a5c537a10d4bc5d18c08d0ffa597e46aeb
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: /certs
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: /certs/client
+  interruptible: true
+  timeout: 45m
+  before_script:
+    - for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
+    - docker info --format 'Docker {{.ServerVersion}}, {{.NCPU}} CPUs, {{.MemTotal}} bytes of memory'
+    # Docker refuses a CPU limit above what the runner has, so use at most 4, as `make test` does.
+    - export CONVERTER_CPUS="$(docker info --format '{{.NCPU}}')"
+    - if [ "$CONVERTER_CPUS" -gt 4 ]; then export CONVERTER_CPUS=4; fi
+
+test:
+  extends: .docker-job
+  script:
+    - docker compose -f docker-compose.test.yml run --rm -T --build converter pytest -m "not load"
+
+# Timing-based, so a busy shared runner can fail it with nothing wrong. Start it by hand when needed.
+load-test:
+  extends: .docker-job
+  when: manual
+  allow_failure: true
+  script:
+    - docker compose -f docker-compose.test.yml run --rm -T --build converter pytest tests/test_load.py -s

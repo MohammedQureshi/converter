@@ -1,0 +1,11 @@
+*
+!app/
+!docker/
+!tests/
+!requirements.lock
+!requirements-test.lock
+!requirements-tools.lock
+!pytest.ini
+**/__pycache__
+**/*.pyc
+**/.pytest_cache

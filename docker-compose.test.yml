@@ -1,0 +1,40 @@
+# Runs the test suite in a hardened container on an `internal: true` network, which proves the
+# service works with no network access at all:
+#
+#   docker compose -f docker-compose.test.yml run --rm --build converter pytest
+name: pdfa-converter-test
+
+services:
+  converter:
+    build:
+      context: .
+      target: test
+      args:
+        APT_MIRROR: ${APT_MIRROR:-http://deb.debian.org}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-}
+    image: pdfa-converter:test
+    environment:
+      API_KEY: ${API_KEY:-dev-api-key-change-me}
+      LO_POOL_SIZE: "4"
+      # Tells the test suite to verify the isolation and hardening set up here.
+      EXPECT_INTERNAL_NETWORK: "1"
+      EXPECT_HARDENED_CONTAINER: "1"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=2g,mode=1777,uid=10001,gid=10001,exec
+      - /tmp/work:size=1g,mode=0700,uid=10001,gid=10001
+      - /tmp/lo:size=512m,mode=0700,uid=10001,gid=10001
+    cpus: ${CONVERTER_CPUS:-4}
+    mem_limit: 6g
+    pids_limit: 2048
+    networks:
+      - isolated
+
+networks:
+  isolated:
+    internal: true

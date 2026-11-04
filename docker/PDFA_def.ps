@@ -1,0 +1,21 @@
+%!
+% Ghostscript PDF/A definition: declares an sRGB OutputIntent for PDF/A-1.
+% The profile path points inside the image; the Dockerfile locates Ghostscript's
+% bundled srgb.icc at build time and copies it there. Ghostscript is run with
+% -dSAFER, so the command line grants read access with --permit-file-read.
+
+/ICCProfile (/opt/pdfa/srgb.icc) def
+
+[/_objdef {icc_PDFA} /type /stream /OBJ pdfmark
+[{icc_PDFA} <</N 3>> /PUT pdfmark
+[{icc_PDFA} ICCProfile (r) file /PUT pdfmark
+
+[/_objdef {OutputIntent_PDFA} /type /dict /OBJ pdfmark
+[{OutputIntent_PDFA} <<
+  /Type /OutputIntent
+  /S /GTS_PDFA1
+  /DestOutputProfile {icc_PDFA}
+  /OutputConditionIdentifier (sRGB)
+  /Info (sRGB IEC61966-2.1)
+>> /PUT pdfmark
+[{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark

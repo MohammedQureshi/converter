@@ -1,0 +1,12 @@
+# Runs the converter on port 8080. Start with `make up`, stop with `make down`.
+# Tests use docker-compose.test.yml. For production settings, see "Running in production" in the README.
+name: pdfa-converter
+
+services:
+  converter:
+    build: .
+    image: pdfa-converter:runtime
+    ports:
+      - "8080:8080"
+    environment:
+      API_KEY: ${API_KEY:-dev-api-key-change-me}

@@ -1,0 +1,2 @@
+# Build-time tools. These generate THIRD_PARTY_LICENSES.md and never reach the final image.
+pip-licenses==5.5.5
